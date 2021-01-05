@@ -4,7 +4,7 @@ extern FILE* yyin;
 extern char* yytext;
 extern int yylineno;
 %}
-%token ID TIP BGIN END ASSIGN NR 
+%token ID TIP_ARRAY TIP BGIN END ASSIGN NR 
 %start progr
 %%
 progr: declaratii bloc {printf("program corect sintactic\n");}
@@ -16,6 +16,7 @@ declaratii :  declaratie ';'
 declaratie : TIP ID 
            | TIP ID '(' lista_param ')'
            | TIP ID '(' ')'
+           | TIP '[' NR ']' ID
            ;
 lista_param : param
             | lista_param ','  param 
