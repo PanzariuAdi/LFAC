@@ -4,7 +4,11 @@ extern FILE* yyin;
 extern char* yytext;
 extern int yylineno;
 %}
-%token ID TIP_ARRAY TIP BGIN END ASSIGN NR 
+%token ID TIP BGIN END ASSIGN NR CONST IF ELSE WHILE CMP_OP MATH_OP BOOL_OP NEG_OP FOR
+
+%left '+' '-'
+%left '*' '/'
+
 %start progr
 %%
 progr: declaratii bloc {printf("program corect sintactic\n");}
@@ -17,11 +21,12 @@ declaratie : TIP ID
            | TIP ID '(' lista_param ')'
            | TIP ID '(' ')'
            | TIP '[' NR ']' ID
+           | CONST TIP ID ASSIGN NR
            ;
 lista_param : param
             | lista_param ','  param 
             ;
-            
+
 param : TIP ID
       ; 
       
@@ -38,11 +43,44 @@ list :  statement ';'
 statement: ID ASSIGN ID
          | ID ASSIGN NR  		 
          | ID '(' lista_apel ')'
+         | IF '(' condition  ')' '{' list '}'
+         | IF '(' condition  ')' '{' list '}' ELSE '{' list '}'
+         | WHILE '(' condition  ')' '{' list '}'
+         | FOR '(' TIP ID ASSIGN value ';' condition ';' expression ')' '{' list '}'
          ;
-        
+
+value : ID
+      | NR
+      ;
+
+condition : NR CMP_OP NR
+          | NR CMP_OP ID
+          | ID CMP_OP NR
+          | ID CMP_OP ID
+          | NEG_OP '(' condition ')'
+          ;
+
+
 lista_apel : NR
-           | lista_apel ',' NR
-           ;
+          | lista_apel ',' NR
+          ;
+
+operator : MATH_OP
+          | BOOL_OP
+          | CMP_OP
+          | ASSIGN
+          ;
+
+expression : value
+          | value operator expression
+          ;
+
+aexp : aexp '+' aexp { $$ = $1 + $3; }
+     | aexp '-' aexp { $$ = $1 - $3; }
+     | aexp '*' aexp { $$ = $1 * $3; }
+     | aexp '/' aexp { $$ = $1 / $3; }
+     ;
+
 %%
 void yyerror(char * s){
 printf("eroare: %s la linia:%d\n",s,yylineno);
