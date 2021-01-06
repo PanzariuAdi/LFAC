@@ -12,13 +12,15 @@
 "else" {return ELSE;}
 "while" {return WHILE;}
 "for" {return FOR;}
+"class" {return CLASS;}
+"private"|"protected"|"public" {return CLASS_SPEC;}
 "<"|">"|"<="|">=" {return CMP_OP;}
 "+"|"-"|"*"|"/" {return MATH_OP;}
 "&&"|"||" {return BOOL_OP;}
 "!" {return NEG_OP;}
 @[_a-zA-Z][_a-zA-Z0-9]* {return ID;}
 ":=" {return ASSIGN;}
-[0-9]+ {return NR;}
+[1-9]*[0-9]+ {return NR;}
 [ \t] ;
 \n {yylineno++;}
 . {return yytext[0];}

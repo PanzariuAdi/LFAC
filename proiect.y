@@ -4,7 +4,7 @@ extern FILE* yyin;
 extern char* yytext;
 extern int yylineno;
 %}
-%token ID TIP BGIN END ASSIGN NR CONST IF ELSE WHILE CMP_OP MATH_OP BOOL_OP NEG_OP FOR
+%token ID TIP BGIN END ASSIGN NR CONST IF ELSE WHILE CMP_OP MATH_OP BOOL_OP NEG_OP FOR CLASS CLASS_SPEC
 
 %left '+' '-'
 %left '*' '/'
@@ -47,11 +47,19 @@ statement: ID ASSIGN ID
          | IF '(' condition  ')' '{' list '}' ELSE '{' list '}'
          | WHILE '(' condition  ')' '{' list '}'
          | FOR '(' TIP ID ASSIGN value ';' condition ';' expression ')' '{' list '}'
+         | CLASS ID '{' class_items '}'
          ;
 
 value : ID
       | NR
       ;
+
+class_item : CLASS_SPEC TIP ID '(' lista_apel ')' '{' list '}'
+          | CLASS_SPEC TIP ID '(' ')' '{' list '}'
+          | CLASS_SPEC TIP ID
+
+class_items : class_item ';'
+          | class_items class_item ';'
 
 condition : NR CMP_OP NR
           | NR CMP_OP ID
@@ -59,6 +67,10 @@ condition : NR CMP_OP NR
           | ID CMP_OP ID
           | NEG_OP '(' condition ')'
           ;
+
+conditions : condition BOOL_OP conditions
+          | condition
+          ; 
 
 
 lista_apel : NR
