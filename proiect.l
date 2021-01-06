@@ -14,10 +14,12 @@
 "for" {return FOR;}
 "class" {return CLASS;}
 "private"|"protected"|"public" {return CLASS_SPEC;}
+"true"|"false" {return BOOL_VAR;}
 "<"|">"|"<="|">=" {return CMP_OP;}
 "+"|"-"|"*"|"/" {return MATH_OP;}
 "&&"|"||" {return BOOL_OP;}
 "!" {return NEG_OP;}
+"strcpy"|"strcat" {return STR_OP;}
 @[_a-zA-Z][_a-zA-Z0-9]* {return ID;}
 ":=" {return ASSIGN;}
 [1-9]*[0-9]+ {return NR;}

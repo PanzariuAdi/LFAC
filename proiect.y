@@ -4,7 +4,7 @@ extern FILE* yyin;
 extern char* yytext;
 extern int yylineno;
 %}
-%token ID TIP BGIN END ASSIGN NR CONST IF ELSE WHILE CMP_OP MATH_OP BOOL_OP NEG_OP FOR CLASS CLASS_SPEC
+%token ID TIP BGIN END ASSIGN NR CONST IF ELSE WHILE CMP_OP MATH_OP BOOL_OP NEG_OP FOR CLASS CLASS_SPEC BOOL_VAR STR_OP
 
 %left '+' '-'
 %left '*' '/'
@@ -27,7 +27,10 @@ lista_param : param
             | lista_param ','  param 
             ;
 
-param : TIP ID
+param : declaratie
+      | value
+      | b_exp_list
+      | a_exp_list
       ; 
       
 /* bloc */
@@ -40,14 +43,16 @@ list :  statement ';'
      ;
 
 /* instructiune */
-statement: ID ASSIGN ID
-         | ID ASSIGN NR  		 
+statement: ID ASSIGN value
+         | ID ASSIGN a_exp_list
+         | ID ASSIGN b_exp_list
          | ID '(' lista_apel ')'
          | IF '(' condition  ')' '{' list '}'
          | IF '(' condition  ')' '{' list '}' ELSE '{' list '}'
          | WHILE '(' condition  ')' '{' list '}'
          | FOR '(' TIP ID ASSIGN value ';' condition ';' expression ')' '{' list '}'
          | CLASS ID '{' class_items '}'
+         | STR_OP '(' ID ',' ID ')'
          ;
 
 value : ID
@@ -73,8 +78,8 @@ conditions : condition BOOL_OP conditions
           ; 
 
 
-lista_apel : NR
-          | lista_apel ',' NR
+lista_apel : param
+          | lista_apel ',' param
           ;
 
 operator : MATH_OP
@@ -86,6 +91,21 @@ operator : MATH_OP
 expression : value
           | value operator expression
           ;
+
+a_exp : value
+     | MATH_OP
+     ;
+a_exp_list : a_exp
+     | value MATH_OP a_exp_list
+     ;
+
+b_exp : BOOL_VAR
+     | value
+     | BOOL_OP
+     ;
+b_exp_list : b_exp
+     | b_exp BOOL_OP b_exp_list
+     ;
 
 aexp : aexp '+' aexp { $$ = $1 + $3; }
      | aexp '-' aexp { $$ = $1 - $3; }

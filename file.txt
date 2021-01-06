@@ -1,4 +1,6 @@
 int @i;
+int @e1;
+bool @e2;
 float @f;
 int[100] @vector;
 char[500] @cuvant;
@@ -19,16 +21,25 @@ if(!(2 > 5)) {
 
 for(int @j:=1; @j<10; @j:=@j+1) {
     @i:=100;
+    @j:=200;
 };
 
 class @Student {
     public string @nume;
     private int @notaLfac;
 
-    public int @getNume() {
-        @i:=100;
+    public int @setNota() {
+        @i:=10;
     };
 };
+
+@e1 := 1 + 2 * 2 - 2 * 1000 / 2;
+@e2 := true && false && true;
+
+strcpy(@s1, @s2);
+strcat(@s1, @s2);
+
+@max(int @min(@a, @b), @c);
 
 end_progr
  
