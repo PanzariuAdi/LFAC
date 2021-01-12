@@ -37,6 +37,7 @@
 "{" {return LB;}
 "}" {return RB;}
 EVAL {return EVAL;}
+PRINT {return PRINT;}
 [ \t] ;
 \n {yylineno++;}
 . {return yytext[0];}
