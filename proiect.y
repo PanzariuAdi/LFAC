@@ -85,7 +85,7 @@ void pushScope();
 int getCurrentScope();
 void popScope(int delete);
 void assignVal(struct var *v,struct info *inf);
-void assignVar(char *key1,char *key2);
+int assignVar(struct var *v1,struct var *v2 );
 float convertToFloat(int part1,int part2);
 float convertToFloatFromTxt(int part1,char *part2);
 void initParamList(struct param *paramlist);
@@ -98,13 +98,14 @@ void eval(struct info *inf);
 void checkForFunction(char* key,struct param *params);
 void assignIDtoInfo(char* key,struct info *inf);
 void insertVectorIntoList(char *tip,int index,char* key);
+int getVectorVal(char * key, int i);
 extern FILE* yyin;
 extern char* yytext;
 extern int yylineno;
 %}
 %union{int val;char *strval;char charval;struct info *inf;struct param *params;struct var *v}
 
-%token BGIN END ASSIGN CONST IF ELSE WHILE NEG_OP FOR CLASS CLASS_SPEC BOOL_VAR STR_OP LB RB COMMA
+%token BGIN END ASSIGN CONST IF ELSE WHILE NEG_OP FOR CLASS CLASS_SPEC BOOL_VAR STR_OP LB RB COMMA PRINT
 
 %token <strval>ID
 %token <strval>TIP
@@ -123,6 +124,7 @@ extern int yylineno;
 %token <val>SLASHOP
 %token <val>ANDOP
 %token <val>OROP
+
 
 %type <v>variable
 %type <params>lista_param
@@ -169,6 +171,7 @@ rb : RB	{popScope(1);}
 
 declaratie : declaratieTip
 	   | declaratieFunctii
+	   | PRINT {printList();}
            ;
 lista_param : param {struct param *params = insertParamsIntoParamListInfo($$,$1); $$ = params;}
             | lista_param ','  param {struct param *params = insertParamsIntoParamListInfo($$,$3); $$ = params;}
@@ -176,6 +179,7 @@ lista_param : param {struct param *params = insertParamsIntoParamListInfo($$,$1)
 param : expression
       | value
       | ID {struct info *in = (struct info*)malloc(sizeof(struct info));assignIDtoInfo($1,in) ;$$ = in;}
+      | ID '[' NR ']'
       ;
 /* bloc */
 bloc : begin list end  
@@ -190,9 +194,9 @@ list :  statement ';'
      | list statement ';'
      ;
 /* instructiune */
-statement: variable ASSIGN value//	{assignVal($1,$3);}
-	 | ID ASSIGN ID		{assignVar($1,$3);}
-	 | ID ASSIGN expression {assignVal($1,$3);}
+statement: variable ASSIGN value	{assignVal($1,$3);}
+	 | variable ASSIGN variable	{assignVar($1,$3);}
+	 | variable ASSIGN expression {assignVal($1,$3);}
          | IF '(' expression  ')' lb list rb
          | IF '(' expression  ')' lb list rb ELSE lb list rb
          | WHILE '(' expression  ')' lb list rb
@@ -203,9 +207,10 @@ statement: variable ASSIGN value//	{assignVal($1,$3);}
 	 | ID'('lista_param')' {checkForFunction($1,$3);}
 	 | ID '('')' {checkForFunction($1,NULL);}
 	 | EVAL'(' expression ')' {eval($3);free($3);}
+	 | PRINT {printList();}
          ;
-variable : ID {struct var v; v.vector=0;v.index=0;v.key=$1;$$=&v;}
-         | ID '[' NR ']' {struct var v;v.vector=1;v.index=$3;$$=&v;}
+variable : ID {struct var *v = (struct var*)malloc(sizeof(struct var));v->vector=0;v->index=0;v->key=$1;$$=v;}
+         | ID '[' NR ']' {struct var *v = (struct var *)malloc(sizeof(struct var));v->vector=1;v->index=$3;v->key=$1;$$=v;}
         ;
 
 value : NR	{struct info *in = (struct info*)malloc(sizeof(struct info));in->intval = $1;in->type = INT; $$ = in;}
@@ -250,7 +255,7 @@ expression: identifier operator identifier {struct info *in = (struct info*)mall
           ;
 identifier : value {$$ = $1;}//NR {struct info *in = (struct info*)malloc(sizeof(struct info));in->intval = $1;in->type = INT; $$ = in;}
 	   | ID {struct info *in = (struct info*)malloc(sizeof(struct info));in->intval = getVal($1);in->type = INT; $$ = in;}
-	   |
+	   | ID '[' NR ']' {struct info *in = (struct info*)malloc(sizeof(struct info));in->intval=getVectorVal($1,$3);in->type = INT; $$ = in;};
 	   ;
 
 %%
@@ -333,6 +338,15 @@ int getVal(char* key)
 	if(symbolTable[ind].type != INT)
 		printf("ERROR invalid item in expression!\n"),exit(1);*/
 	return symbolTable[ind].intVal;
+}
+int getVectorVal(char * key, int i)
+{
+	int ind = findInList(key);
+        if(ind == -1)
+        {
+                printf("ERROR %s does not exist!\n",key),exit(1);
+        }
+	return symbolTable[ind].intVector[i];
 }
 void insertIntoList(char *denumire,char* type,int varconst,int scope)
 {
@@ -487,13 +501,56 @@ if(v->vector == 0)
 
 		}
 }
+else
+{
+	int ind = findInList(v->key);
+	if(ind ==-1)
+                {
+                        printf("Variable %s does not exist!\n",v->key);
+                        exit(1);
+                }
+        else
+                {
+                        switch (symbolTable[ind].type){
+                                case INT:
+					//printf("writing %d to %s at key %d\n",inf->intval,v->key,v->index);
+                                        symbolTable[ind].intVector[v->index] = inf->intval;
+                                        break;
+                                case STRING:
+                                        removeQM(inf->strval);
+                                        strcpy(symbolTable[ind].stringVector[v->index],inf->strval);
+                                        break;
+                                case CHAR:
+                                        symbolTable[ind].charVector[v->index] = inf->charval;
+                                        break;
+                                case BOOL:
+                                        if(inf->intval == 0)
+                                                symbolTable[ind].boolVector[v->index] = 0;
+                                        else
+                                                symbolTable[ind].boolVector[v->index] = 1;
+
+                                        break;
+                                case FLOAT:
+                                        symbolTable[ind].floatVector[v->index] = inf->floatval;
+                                        break;
+
+                        }
+
+                }
+
+}
 free(inf);
 }
 
-void assignVar(char *key1,char* key2)
+int assignVar(struct var *v1,struct var *v2)
 {
-	int ind1 = findInList(key1);
-	int ind2 = findInList(key2);
+char key1[100],key2[100];
+strcpy(key1,v1->key);
+strcpy(key2,v2->key);
+int ind1 = findInList(key1);
+int ind2 = findInList(key2);
+if(v1->vector == 0 && v2->vector == 0)
+{
 	if(ind1 == -1)
 		printf("ERROR %s token does not exist!\n",key1),exit(1);
 	if(ind2 == -1)
@@ -525,9 +582,122 @@ void assignVar(char *key1,char* key2)
 
 					}
 					break;
-			};
+			}
 			symbolTable[ind1].assigned = 1;
 		}
+	free(v1);
+	free(v2);
+	return 1;
+}
+if(v1->vector == 1 && v2->vector ==0)
+{
+        if(ind1 == -1)
+                printf("ERROR %s token does not exist!\n",key1),exit(1);
+        if(ind2 == -1)
+                printf("ERROR %s token does not exist!\n",key2),exit(1);
+        if(symbolTable[ind1].type != symbolTable[ind2].type)
+                printf("ERROR %s and %s have different types!\n",key1,key2),exit(1);
+        if(symbolTable[ind2].assigned == 0)
+                printf("ERROR %s is not assigned!\n",key2),exit(1);
+        else
+                {
+                        switch (symbolTable[ind1].type){
+                                case BOOL:
+					symbolTable[ind1].boolVector[v1->index] = symbolTable[ind2].intVal;
+					break;
+                                case INT:
+                                        symbolTable[ind1].intVector[v1->index] = symbolTable[ind2].intVal;
+                                        break;
+                                case FLOAT:
+                                        symbolTable[ind1].floatVector[v1->index] = symbolTable[ind2].floatVal;
+                                        break;
+                                case CHAR:
+                                        symbolTable[ind1].charVector[v1->index] = symbolTable[ind2].charVal;
+                                        break;
+                                case STRING:
+                                                strcpy(symbolTable[ind1].stringVector[v1->index],symbolTable[ind2].stringVal);
+                                        break;
+                        }
+                }
+        free(v1);
+        free(v2);
+        return 1;
+
+}
+if(v1->vector == 0 && v2->vector == 1)
+{
+        if(ind1 == -1)
+                printf("ERROR %s token does not exist!\n",key1),exit(1);
+        if(ind2 == -1)
+                printf("ERROR %s token does not exist!\n",key2),exit(1);
+        if(symbolTable[ind1].type != symbolTable[ind2].type)
+                printf("ERROR %s and %s have different types!\n",key1,key2),exit(1);
+        else
+                {
+                        switch (symbolTable[ind1].type){
+                                case BOOL:
+					symbolTable[ind1].intVal = symbolTable[ind2].boolVector[v2->index];
+					break;
+                                case INT:
+                                        symbolTable[ind1].intVal = symbolTable[ind2].intVector[v2->index];
+                                        break;
+                                case FLOAT:
+                                        symbolTable[ind1].floatVal = symbolTable[ind2].floatVector[v2->index];
+                                        break;
+                                case CHAR:
+                                        symbolTable[ind1].charVal = symbolTable[ind2].charVector[v2->index];
+                                        break;
+                                case STRING:
+                                        if(symbolTable[ind1].assigned)
+                                                strcpy(symbolTable[ind1].stringVal,symbolTable[ind2].stringVector[v2->index]);
+                                        else
+                                        {
+                                                symbolTable[ind1].stringVal = (char*)malloc(100);
+                                                strcpy(symbolTable[ind1].stringVal,symbolTable[ind2].stringVector[v2->index]);
+
+                                        }
+                                        break;
+                        }
+                        symbolTable[ind1].assigned = 1;
+                }
+        free(v1);
+        free(v2);
+        return 1;
+}
+if(v1->vector == 1 && v2->vector ==1)
+{
+        if(ind1 == -1)
+                printf("ERROR %s token does not exist!\n",key1),exit(1);
+        if(ind2 == -1)
+                printf("ERROR %s token does not exist!\n",key2),exit(1);
+        if(symbolTable[ind1].type != symbolTable[ind2].type)
+                printf("ERROR %s and %s have different types!\n",key1,key2),exit(1);
+        else
+                {
+                        switch (symbolTable[ind1].type){
+                                case BOOL:
+					symbolTable[ind1].boolVector[v1->index] = symbolTable[ind2].boolVector[v2->index];
+break;
+                                case INT:
+                                        symbolTable[ind1].intVector[v1->index] = symbolTable[ind2].intVector[v2->index];
+                                        break;
+                                case FLOAT:
+                                        symbolTable[ind1].floatVector[v1->index] = symbolTable[ind2].floatVector[v2->index];
+                                        break;
+                                case CHAR:
+                                        symbolTable[ind1].charVector[v1->index] = symbolTable[ind2].charVector[v2->index];
+                                        break;
+                                case STRING:
+                                                strcpy(symbolTable[ind1].stringVector[v1->index],symbolTable[ind2].stringVector[v2->index]);
+                                        break;
+                        }
+                }
+        free(v1);
+        free(v2);
+        return 1;
+
+}
+
 }
 void assignIDtoInfo(char* key,struct info *inf)
 {
@@ -708,7 +878,7 @@ for(int i = 0;i<=STBINDEX-1;i++)
 {
         if(symbolTable[i].type != -1 && symbolTable[i].function == NOFUNCTION)
 	{
-                fprintf(f,"denumire: %s\ntip: %d\nscope: %d\n",symbolTable[i].denumire,symbolTable[i].type,symbolTable[i].scope);
+                fprintf(f,"denumire: %s\ntip: %d\nscope: %d\nassigned: %d\n",symbolTable[i].denumire,symbolTable[i].type,symbolTable[i].scope,symbolTable[i].assigned);
 		if(symbolTable[i].assigned == 1 && symbolTable[i].vector==0)
 			{
 				switch (symbolTable[i].type){
@@ -731,7 +901,7 @@ for(int i = 0;i<=STBINDEX-1;i++)
 		{
 			fprintf(f,"index: %d\n",symbolTable[i].index);
 			fprintf(f,"vector values: ");
-			for(int j = 0;j<=symbolTable[i].index;j++)
+			for(int j = 0;j<=symbolTable[i].index-1;j++)
 			{
 				switch (symbolTable[i].type){
 					case INT:
@@ -755,7 +925,7 @@ for(int i = 0;i<=STBINDEX-1;i++)
 				}
 			}
 		}
-		fprintf(f,"\n");
+		fprintf(f,"\n\n");
 	}
 		
 }
@@ -783,6 +953,5 @@ initScope();
 initList();
 yyin=fopen(argv[1],"r");
 yyparse();
-printList();
 
 } 
